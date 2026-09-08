@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DistroMap</title>
+<meta name="description" content="Find the Indian apps and communities your users already open, ranked by fit, and export a distribution playbook.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F7F5F0;
+    --ink: #1C1B18;
+    --muted: #6B6862;
+    --line: #D8D4CA;
+    --line-soft: #E8E5DD;
+    --panel: #FDFCFA;
+    --accent: #1B5E3B;
+    --r: 4px;
+    --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); color: var(--ink); }
+  body {
+    margin: 0;
+    font-family: 'Public Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.45;
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-text-size-adjust: 100%;
+  }
+  a { color: var(--accent); }
+  a:hover { text-decoration-thickness: 2px; }
+  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  main { max-width: 1040px; margin: 0 auto; padding: var(--s6) var(--s5) var(--s7); }
+  header { padding: var(--s6) 0 var(--s5); border-bottom: 1px solid var(--line); margin-bottom: var(--s5); }
+  header h1 { font-size: 22px; font-weight: 600; margin: 0 0 var(--s1); letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--muted); font-size: 15px; }
+  h2 { font-size: 13px; font-weight: 600; margin: 0 0 var(--s2); text-transform: none; color: var(--ink); }
+  .muted { color: var(--muted); }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* inputs */
+  .setup { display: grid; grid-template-columns: 300px 1fr; gap: var(--s5); align-items: start; }
+  .field { margin-bottom: var(--s4); }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: var(--s1); }
+  input[type="text"], select {
+    width: 100%; font: inherit; color: var(--ink); background: var(--panel);
+    border: 1px solid var(--line); border-radius: var(--r); padding: 7px var(--s3); height: 34px;
+  }
+  select { appearance: none; -webkit-appearance: none; background-image: none; padding-right: var(--s5); }
+  .selectwrap { position: relative; }
+  .selectwrap::after { content: ""; position: absolute; right: 12px; top: 14px; width: 6px; height: 6px; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(45deg); pointer-events: none; }
+  button {
+    font: inherit; font-size: 13px; color: var(--ink); background: var(--panel);
+    border: 1px solid var(--line); border-radius: var(--r); padding: 6px var(--s3); cursor: pointer; line-height: 1.3;
+  }
+  button:hover { border-color: var(--ink); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
+  button.primary:hover { background: #164d30; }
+  button.link { border: 0; background: none; padding: 0; color: var(--accent); text-decoration: underline; }
+  .presets { display: flex; flex-wrap: wrap; gap: var(--s2); }
+  .presets button { text-align: left; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: var(--s2); }
+
+  /* tag chips */
+  .taggroup { margin-bottom: var(--s3); }
+  .taggroup .gname { font-size: 12px; color: var(--muted); margin-bottom: var(--s1); }
+  .chips { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s2); }
+  .chip { padding: 3px var(--s2); font-size: 13px; background: var(--panel); }
+  .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .tagbar { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s3); margin-bottom: var(--s2); }
+
+  /* toolbar */
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); padding: var(--s4) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin-top: var(--s5); }
+  .toolbar .ctl { display: inline-flex; align-items: center; gap: var(--s2); }
+  .toolbar .selectwrap { width: auto; }
+  .toolbar select { width: auto; height: 32px; padding: 5px var(--s5) 5px var(--s2); }
+  .toolbar .spacer { flex: 1; }
+  .toolbar label { font-size: 12px; color: var(--muted); }
+  .status { font-size: 12px; color: var(--muted); min-height: 1.4em; margin-top: var(--s2); }
+
+  /* results */
+  .summary { display: flex; justify-content: space-between; gap: var(--s3); flex-wrap: wrap; margin: var(--s4) 0 var(--s2); font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { text-align: left; font-size: 12px; font-weight: 500; color: var(--muted); padding: var(--s2) var(--s2); border-bottom: 1px solid var(--line); white-space: nowrap; }
+  thead th button { font-size: 12px; color: var(--muted); border: 0; background: none; padding: 0; text-decoration: underline dotted; }
+  thead th button[aria-pressed="true"] { color: var(--ink); text-decoration: underline; }
+  tbody td { padding: var(--s2); border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  tbody tr.row:hover td { background: var(--panel); }
+  td.rank { width: 32px; color: var(--muted); }
+  td.surface { min-width: 180px; }
+  td.surface .cat { display: block; font-size: 12px; color: var(--muted); }
+  td.fit { width: 150px; white-space: nowrap; }
+  .bar { display: inline-block; vertical-align: middle; width: 90px; height: 3px; background: var(--line); border-radius: var(--r); margin-left: var(--s2); overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--accent); }
+  td.reach { width: 110px; white-space: nowrap; }
+  td.reach .v { font-size: 12px; color: var(--muted); }
+  td.ease { width: 120px; }
+  td.why { width: 70px; text-align: right; }
+  td.why button { padding: 3px var(--s2); font-size: 12px; }
+  tr.detail td { padding: var(--s3) var(--s2) var(--s4) var(--s2); background: var(--panel); border-bottom: 1px solid var(--line); }
+  .factors { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3) var(--s5); }
+  .factors dl { margin: 0; display: grid; grid-template-columns: 130px 1fr; gap: var(--s1) var(--s3); font-size: 13px; }
+  .factors dt { color: var(--muted); }
+  .factors dd { margin: 0; }
+  .factors .wayin { grid-column: 1 / -1; }
+  .factors .wayin p { margin: var(--s1) 0 0; max-width: 70ch; }
+  .formula { font-size: 12px; color: var(--muted); margin-top: var(--s3); }
+  .empty { padding: var(--s6) 0; color: var(--muted); max-width: 60ch; }
+  .empty p { margin: 0 0 var(--s2); }
+  footer { margin-top: var(--s7); padding-top: var(--s4); border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  @media (max-width: 760px) {
+    .setup { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 640px) {
+    main { padding: var(--s4) var(--s4) var(--s6); }
+    thead { display: none; }
+    table, tbody, tr, td { display: block; width: auto; }
+    tbody tr.row { padding: var(--s3) 0; border-bottom: 1px solid var(--line-soft); }
+    tbody tr.row td { border: 0; padding: 2px 0; width: auto; min-width: 0; white-space: normal; }
+    tbody tr.row td::before { content: attr(data-label); display: inline-block; width: 84px; font-size: 12px; color: var(--muted); }
+    td.rank::before, td.surface::before { display: none !important; }
+    tbody tr.row td.rank { display: inline; padding-right: var(--s2); }
+    tbody tr.row td.surface { display: inline; font-weight: 500; }
+    tbody tr.row td.fit { padding-top: var(--s1); }
+    td.surface .cat { display: inline; margin-left: var(--s2); font-weight: 400; }
+    td.why { text-align: left; }
+    tr.detail td { padding: var(--s3); }
+    .factors { grid-template-columns: 1fr; }
+    .factors dl { grid-template-columns: 110px 1fr; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .bar i { transition: width 240ms ease-out; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>DistroMap</h1>
+    <p>Find the apps your users already open. Then get inside them.</p>
+  </header>
+
+  <section class="setup" aria-label="Inputs">
+    <div>
+      <div class="field">
+        <label for="product">Product name</label>
+        <input type="text" id="product" placeholder="e.g. Acme Wealth" autocomplete="off" maxlength="60">
+      </div>
+      <div class="field">
+        <label for="category">Product category</label>
+        <div class="selectwrap">
+          <select id="category">
+            <option value="">Choose one</option>
+            <option value="investing">Investing and wealth</option>
+            <option value="payments">Payments and UPI</option>
+            <option value="credit">Credit and lending</option>
+            <option value="insurance">Insurance</option>
+            <option value="savings">Savings and neobank</option>
+            <option value="sme">SME and merchant tools</option>
+            <option value="health">Health</option>
+            <option value="edtech">Edtech</option>
+            <option value="d2c">D2C and commerce</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <p class="hint" id="cathint" hidden></p>
+      </div>
+      <div class="field">
+        <label>Presets</label>
+        <div class="presets" id="presets"></div>
+        <p class="hint">One click each. You can edit the tags after.</p>
+      </div>
+    </div>
+    <div>
+      <div class="tagbar">
+        <h2 id="taglabel">Target user</h2>
+        <span class="muted num" id="tagcount">0 tags picked</span>
+      </div>
+      <div id="tags" role="group" aria-labelledby="taglabel"></div>
+      <p class="hint">Fit is the share of your tags a surface matches. Four to six tags works best; more dilutes the score.</p>
+    </div>
+  </section>
+
+  <div class="toolbar" role="toolbar" aria-label="Results controls">
+    <span class="ctl"><label for="integration">Integration</label>
+    <div class="selectwrap"><select id="integration"><option value="">Any</option></select></div></span>
+    <span class="ctl"><label for="sort">Sort</label>
+    <div class="selectwrap"><select id="sort"><option value="fit">Fit</option><option value="reach">Reach</option></select></div></span>
+    <span class="spacer"></span>
+    <button type="button" id="copylink">Copy link</button>
+    <button type="button" id="download">Download .md</button>
+    <button type="button" class="primary" id="copymd">Copy playbook</button>
+  </div>
+  <p class="status" id="status" role="status" aria-live="polite"></p>
+
+  <section aria-label="Results" id="results"></section>
+
+  <footer>Built by Priyansh Mathur. Scoring is deterministic and explainable; reach bands are order-of-magnitude and dated.</footer>
+</main>
+
+<!-- Inlined copy of data/surfaces.json. data/surfaces.json is the source of truth; run `node scripts/sync.js` after editing it. -->
+<script type="application/json" id="surfaces">
+</script>
+
+<!-- Inlined copy of src/score.js (exports stripped). src/score.js is the source of truth; run `node scripts/sync.js` after editing it. -->
+<script id="score-inline">
+</script>
+
+<script type="module">
+  const S = window.DistroScore;
+  const $ = (sel) => document.querySelector(sel);
+  const el = (tag, attrs = {}, ...kids) => {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "class") n.className = v;
+      else if (k === "text") n.textContent = v;
+      else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+      else if (v === false || v == null) continue;
+      else n.setAttribute(k, v === true ? "" : v);
+    }
+    for (const k of kids) if (k != null) n.append(k);
+    return n;
+  };
+
+  const PRESETS = [
+    { name: "Urban salaried investor 25-40", category: "investing", tags: ["salaried", "urban", "professional", "investor", "25-40", "high-intent-finance"] },
+    { name: "Tier-2 first-time investor", category: "investing", tags: ["tier2-3", "vernacular", "young", "learner", "investor", "mass"] },
+    { name: "Small business owner", category: "sme", tags: ["small-business", "payments", "tier2-3", "borrower", "30-50"] },
+  ];
+  const CATEGORY_TAGS = {
+    investing: ["investor", "high-intent-finance"],
+    payments: ["payments", "mass"],
+    credit: ["borrower", "credit-card"],
+    insurance: ["family", "salaried"],
+    savings: ["salaried", "young"],
+    sme: ["small-business", "payments"],
+    health: ["family", "urban"],
+    edtech: ["student", "learner"],
+    d2c: ["spender", "urban"],
+    other: [],
+  };
+  const LIMIT = 15;
+
+  const data = JSON.parse(document.getElementById("surfaces").textContent);
+  const surfaces = data.surfaces;
+  const state = { product: "", category: "", tags: [], integration: "", sort: "fit", open: new Set() };
+
+  // URL hash <-> state
+  function readHash() {
+    const h = new URLSearchParams(location.hash.replace(/^#/, ""));
+    state.product = (h.get("p") || "").slice(0, 60);
+    state.category = h.get("c") || "";
+    state.tags = (h.get("t") || "").split(",").filter(Boolean);
+    state.integration = h.get("i") || "";
+    state.sort = h.get("s") === "reach" ? "reach" : "fit";
+  }
+  function writeHash() {
+    const h = new URLSearchParams();
+    if (state.product) h.set("p", state.product);
+    if (state.category) h.set("c", state.category);
+    if (state.tags.length) h.set("t", state.tags.join(","));
+    if (state.integration) h.set("i", state.integration);
+    if (state.sort !== "fit") h.set("s", state.sort);
+    const next = h.toString() ? "#" + h.toString() : "";
+    if (next !== location.hash) history.replaceState(null, "", location.pathname + location.search + next);
+  }
+
+  // Build controls
+  const grouped = S.collectTags(surfaces);
+  const tagsRoot = $("#tags");
+  for (const [group, tags] of Object.entries(grouped)) {
+    const wrap = el("div", { class: "taggroup" }, el("div", { class: "gname", text: group }));
+    const chips = el("div", { class: "chips" });
+    for (const t of tags) {
+      chips.append(el("button", { type: "button", class: "chip", "data-tag": t, "aria-pressed": "false", text: t, onclick: () => toggleTag(t) }));
+    }
+    wrap.append(chips);
+    tagsRoot.append(wrap);
+  }
+  const intSel = $("#integration");
+  for (const i of Object.keys(S.INTEGRATION_EASE).sort((a, b) => S.INTEGRATION_EASE[b] - S.INTEGRATION_EASE[a])) {
+    intSel.append(el("option", { value: i, text: `${i} (${S.INTEGRATION_EASE[i].toFixed(2)})` }));
+  }
+  for (const p of PRESETS) {
+    $("#presets").append(el("button", { type: "button", text: p.name, onclick: () => applyPreset(p) }));
+  }
+
+  function toggleTag(t) {
+    const i = state.tags.indexOf(t);
+    if (i >= 0) state.tags.splice(i, 1); else state.tags.push(t);
+    state.open.clear();
+    update();
+  }
+  function applyPreset(p) {
+    state.tags = [...p.tags];
+    if (!state.category) state.category = p.category;
+    state.open.clear();
+    update();
+    $("#results").focus({ preventScroll: true });
+  }
+  function addCategoryTags() {
+    for (const t of CATEGORY_TAGS[state.category] || []) if (!state.tags.includes(t)) state.tags.push(t);
+    update();
+  }
+
+  $("#product").addEventListener("input", (e) => { state.product = e.target.value.trim(); writeHash(); });
+  $("#category").addEventListener("change", (e) => { state.category = e.target.value; update(); });
+  intSel.addEventListener("change", (e) => { state.integration = e.target.value; update(); });
+  $("#sort").addEventListener("change", (e) => { state.sort = e.target.value; update(); });
+  window.addEventListener("hashchange", () => { readHash(); update(); });
+
+  function ranked() {
+    return S.rankSurfaces(surfaces, state.tags, LIMIT, { integration: state.integration, sortBy: state.sort });
+  }
+  function productName() { return state.product || "Untitled product"; }
+  function playbook() {
+    const md = S.toPlaybook(productName(), state.tags, ranked(), { asOf: data.asOf });
+    return state.category ? md.replace("\n\nTarget user tags:", `\n\nCategory: ${state.category}\n\nTarget user tags:`) : md;
+  }
+  function say(msg) { $("#status").textContent = msg; }
+
+  $("#copymd").addEventListener("click", async () => {
+    if (!state.tags.length) return say("Pick at least one tag first.");
+    try { await navigator.clipboard.writeText(playbook()); say("Playbook copied as Markdown."); }
+    catch { say("Clipboard blocked by the browser. Use Download instead."); }
+  });
+  $("#download").addEventListener("click", () => {
+    if (!state.tags.length) return say("Pick at least one tag first.");
+    const blob = new Blob([playbook()], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = el("a", { href: url, download: `distromap-${productName().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "playbook"}.md` });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    say("Downloading the playbook.");
+  });
+  $("#copylink").addEventListener("click", async () => {
+    writeHash();
+    try { await navigator.clipboard.writeText(location.href); say("Link copied. Inputs are in the URL."); }
+    catch { say("Clipboard blocked. Copy the address bar; the inputs are in the URL."); }
+  });
+
+  // Render
+  function render() {
+    const root = $("#results");
+    root.replaceChildren();
+    root.tabIndex = -1;
+    if (!state.tags.length) {
+      root.append(el("div", { class: "empty" },
+        el("p", { text: "Nothing to rank yet." }),
+        el("p", { text: `Pick a preset on the left, or choose the tags that describe your target user. Each of the ${surfaces.length} Indian surfaces is scored on how many of your tags it matches, its reach band, and how easy its easiest integration is. Every score shows its factors.` }),
+        el("p", { text: "Product name and category are optional. They go into the exported playbook and the share link." }),
+      ));
+      return;
+    }
+    const rows = ranked();
+    const summary = el("div", { class: "summary" },
+      el("span", { class: "num" }, `${rows.length} of ${surfaces.length} surfaces match ${state.tags.length} tag${state.tags.length === 1 ? "" : "s"}` + (state.integration ? `, integration: ${state.integration}` : "") + `. Sorted by ${state.sort}.`),
+      el("span", { class: "muted" }, `Reach bands as of ${data.asOf}. "verify" means I am not sure of the band.`),
+    );
+    root.append(summary);
+    if (!rows.length) {
+      root.append(el("div", { class: "empty" }, el("p", { text: "No surface matches all of those constraints. Remove the integration filter or drop a tag." })));
+      return;
+    }
+    const table = el("table");
+    table.append(el("thead", {}, el("tr", {},
+      el("th", { text: "#" }),
+      el("th", { text: "Surface" }),
+      el("th", {}, el("button", { type: "button", "aria-pressed": String(state.sort === "fit"), text: "Fit", onclick: () => { state.sort = "fit"; update(); } })),
+      el("th", {}, el("button", { type: "button", "aria-pressed": String(state.sort === "reach"), text: "Reach", onclick: () => { state.sort = "reach"; update(); } })),
+      el("th", { text: "Easiest way in" }),
+      el("th", {}, el("span", { class: "visually-hidden", text: "Why" })),
+    )));
+    const tbody = el("tbody");
+    rows.forEach((r, i) => {
+      const open = state.open.has(r.id);
+      const detailId = `why-${r.id}`;
+      const tr = el("tr", { class: "row" },
+        el("td", { class: "rank num", "data-label": "#", text: `${i + 1}` }),
+        el("td", { class: "surface" }, el("span", { text: r.name }), el("span", { class: "cat", text: r.category })),
+        el("td", { class: "fit", "data-label": "Fit" }, el("span", { class: "num", text: String(r.score) }), el("span", { class: "bar", "aria-hidden": "true" }, el("i", { style: `width:${r.score}%` }))),
+        el("td", { class: "reach", "data-label": "Reach" }, el("span", { text: r.reach }), " ", el("span", { class: "v", text: S.REACH_LABEL[r.reach] + (r.verify ? ", verify" : "") })),
+        el("td", { class: "ease", "data-label": "Way in", text: r.factors.easiestIntegration }),
+        el("td", { class: "why" }, el("button", { type: "button", "aria-expanded": String(open), "aria-controls": detailId, text: open ? "Hide" : "Why", onclick: () => { open ? state.open.delete(r.id) : state.open.add(r.id); render(); } })),
+      );
+      tbody.append(tr);
+      if (open) tbody.append(detailRow(r, detailId));
+    });
+    table.append(tbody);
+    root.append(table);
+  }
+
+  function detailRow(r, id) {
+    const f = r.factors;
+    const ints = r.integration.map((i) => `${i} ${(S.INTEGRATION_EASE[i] ?? 0.5).toFixed(2)}`).join(", ");
+    const left = el("dl", {},
+      el("dt", { text: "Matched tags" }), el("dd", { text: f.matched.length ? f.matched.join(", ") : "none" }),
+      el("dt", { text: "Missed tags" }), el("dd", { text: f.missed.length ? f.missed.join(", ") : "none" }),
+      el("dt", { text: "Overlap" }), el("dd", { class: "num", text: `${f.matched.length} of ${state.tags.length} = ${f.overlap.toFixed(2)}` }),
+      el("dt", { text: "Surface audience" }), el("dd", { text: r.audience.join(", ") }),
+    );
+    const right = el("dl", {},
+      el("dt", { text: "Reach band" }), el("dd", { class: "num", text: `${f.reach} (${S.REACH_LABEL[f.reach]}), weight ${f.reachWeight.toFixed(2)}${r.verify ? ". Marked verify." : ""}` }),
+      el("dt", { text: "Integrations" }), el("dd", { class: "num", text: ints }),
+      el("dt", { text: "Easiest" }), el("dd", { class: "num", text: `${f.easiestIntegration}, ease ${f.ease.toFixed(2)}` }),
+      el("dt", { text: "Fit" }), el("dd", { class: "num", text: `round(${f.overlap.toFixed(2)} x ${f.reachWeight.toFixed(2)} x ${f.ease.toFixed(2)} x 100) = ${r.score}` }),
+    );
+    const wayin = el("div", { class: "wayin" }, el("strong", { text: "Way in" }), el("p", { text: r.wayIn }), r.example ? el("p", { class: "muted", text: `Precedent: ${r.example}` }) : null);
+    return el("tr", { class: "detail", id }, el("td", { colspan: "6" }, el("div", { class: "factors" }, left, right, wayin)));
+  }
+
+  function syncControls() {
+    $("#product").value = state.product;
+    $("#category").value = state.category;
+    intSel.value = state.integration;
+    $("#sort").value = state.sort;
+    for (const b of tagsRoot.querySelectorAll(".chip")) b.setAttribute("aria-pressed", String(state.tags.includes(b.dataset.tag)));
+    $("#tagcount").textContent = `${state.tags.length} tag${state.tags.length === 1 ? "" : "s"} picked`;
+    const hint = $("#cathint");
+    const sug = (CATEGORY_TAGS[state.category] || []).filter((t) => !state.tags.includes(t));
+    if (sug.length) {
+      hint.replaceChildren(`Common tags for this category: ${sug.join(", ")}. `, el("button", { type: "button", class: "link", text: "Add them", onclick: addCategoryTags }));
+      hint.hidden = false;
+    } else hint.hidden = true;
+  }
+  function update() { syncControls(); writeHash(); render(); }
+
+  readHash();
+  state.tags = state.tags.filter((t) => Object.values(grouped).flat().includes(t));
+  update();
+</script>
+</body>
+</html>
